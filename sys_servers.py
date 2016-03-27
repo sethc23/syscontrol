@@ -1,24 +1,30 @@
+from syscontrol import *
 
-class System_Servers:
+class sys_servers:
     """Functions for Mounting & Unmounting system drives"""
 
     def __init__(self,_parent=None):
-        self.T                              =   System_Lib().T if (not hasattr(self,'T') and not _parent) \
-                                                    else _parent.T if not hasattr(self,'T') else self.T
+
+        if (not hasattr(self,'T') and not _parent):
+            from syscontrol.sys_lib import sys_lib
+            self.T                          =   sys_lib(['pgsql']).T
+        else:
+            self.T = _parent.T if not hasattr(self,'T') else self.T
+
         locals().update(                        self.T.__dict__)
-        shares                              =   self.T.pd.read_sql('select * from shares',self.T.sys_eng)
-        s                                   =   self.T.pd.read_sql('select * from servers where production_usage is not null',self.T.sys_eng)
+        shares                              =   self.T.pd.read_sql('select * from shares',self.T.eng)
+        s                                   =   self.T.pd.read_sql('select * from servers where production_usage is not null',self.T.eng)
         self.sh         =   self.shares     =   shares
         self.s          =   self.servers    =   s
         server_dir_dict                     =   dict(zip(s.tag.tolist(),s.home_dir.tolist()))
         mac                                 =   [int(str(get_mac()))]
         worker                              =   s[ s.mac.isin(mac) & s.home_dir.isin([os_environ['HOME']]) ].iloc[0].to_dict()
-        self.worker                         =   worker['server']
-        self.worker_host                    =   worker['host']
+        self.worker                         =   worker['s_user']
+        self.worker_host                    =   worker['s_host']
         global THIS_SERVER
         THIS_SERVER                         =   self.worker
         self.base_dir                       =   worker['home_dir']
-        self.server_idx                     =   worker['server_idx']
+        self.server_idx                     =   worker['s_idx']
         rank                                =   {'high':3,'medium':2,'low':1,'none':0}
         s['ranking']                        =   s.production_usage.map(rank)
         self.priority                       =   dict(zip(s.tag.tolist(),s.ranking.tolist()))
@@ -65,7 +71,7 @@ class System_Servers:
 
         return
 
-    @arg('shares',nargs='+',default='',choices=parse_choices_from_pgsql("""
+    @arg('shares',nargs='+',default='',choices=arg_by_pgsql("""
             select _res res
             from (
                 select distinct unnest(res) _res
@@ -79,7 +85,7 @@ class System_Servers:
                     ) f
                 ) f2
             ) f3
-            order by _res asc """)+['DEV','ALL','_'],
+            order by _res asc """),more_choices=['DEV','ALL','_'],
             help='target server on which to backup pip')
     def mnt(self,shares=[]):
         """mount known shares to this server at '/Volumes/{SHARE}'"""
@@ -122,9 +128,9 @@ class System_Servers:
 
         return
 
-    @arg('shares',nargs='+',default='',choices=parse_choices_from_exec("""
-                                                                    echo `ls /Volumes > /dev/null 2>&1`;
-                                                                 """).strip('\n').split()+['ALL'],
+    @arg('shares',nargs='+',default='',
+         choices=arg_by_shell("echo `ls /Volumes > /dev/null 2>&1`;",lambda s: s.strip('\n').split()),
+            more_choices=['ALL'],
             help='share dirs on this server')
     def umnt(self,dirs=['ALL'],local=True):
         """unmount linked source(s) from this server in dir '/Volumes'"""

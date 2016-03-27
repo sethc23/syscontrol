@@ -20,7 +20,7 @@ try:
 except:
     pass
 
-class System_Control:
+class sys_control:
 
     def __init__(self,return_cls=None):
         if not return_cls:
