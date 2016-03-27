@@ -1,7 +1,7 @@
 
 class sys_lib:
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self,args,**kwargs):
         """
         args:
             encoding
@@ -26,7 +26,6 @@ class sys_lib:
         if args.count('encoding'):
             reload(sys)
             sys.setdefaultencoding('UTF8')
-        from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
         from uuid                           import getnode                  as get_mac
         from os                             import system                   as os_cmd
         from sys                            import path                     as py_path
@@ -43,7 +42,10 @@ class sys_lib:
         from subprocess                     import PIPE                     as sub_PIPE
         from subprocess                     import STDOUT                   as sub_stdout
         import                                  shlex
-        from time                           import sleep                    as delay
+        from datetime                       import datetime as dt
+        from dateutil                       import parser as DU
+        import                                  time
+        delay                               =   time.sleep
         from uuid                           import uuid4                    as get_guid
         from datetime                       import datetime                 as dt
         from dateutil                       import parser                   as DU
@@ -57,17 +59,37 @@ class sys_lib:
         np                                  =   pd.np
         np.set_printoptions(                    linewidth=200,threshold=np.nan)
 
-        from system_settings                import DB_NAME,DB_HOST,DB_PORT
+        from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
+        T                                   =   To_Class()
+        T.config                            =   To_Class(kwargs,recursive=True)
+        if T.config:
+            T.update(                           T.config.__dict__)
         
+        db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
+        db_vars = [it for it in db_vars if not T._has_key(it)]
+
+        if not db_vars:
+            pass
+
+        elif locals().keys().count('system_settings'):
+            from system_settings import DB_NAME,DB_HOST,DB_PORT
+            for it in db_vars:
+                eval('T["%s"] = %s' % (it,it))
+            
+        else:
+            z = eval("__import__('system_settings')")
+            for it in db_vars:
+                T[it] = getattr(z,it)
+
+
         if args.count('pgsql'):
-            from sqlalchemy                     import create_engine
-            import                                  logging
+            from sqlalchemy                 import create_engine
+            import                              logging
             logging.basicConfig()
             logging.getLogger(                      'sqlalchemy.engine').setLevel(logging.WARNING)
-            import                                  psycopg2
+            from psycopg2                   import connect as pg_connect
             try:
                 eng,conn,cur                    =   _load_connectors()
-
             except:
                 from getpass import getpass
                 pw = getpass('Root password (to create DB:"%s" via CL): ' % DB_NAME)
@@ -84,7 +106,7 @@ class sys_lib:
 
         if args.count('exec_cmd'):
             from sys_admin                  import sys_admin
-            exec_cmd = sys_admin().exec_cmds
+            exec_cmd                        =   sys_admin().exec_cmds
 
         D                                   =   {'user'                     :   os_environ['USER'],
                                                  'guid'                     :   str(get_guid().hex)[:7]}
