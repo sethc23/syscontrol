@@ -13,21 +13,21 @@ class sys_servers:
 
         locals().update(                        self.T.__dict__)
         shares                              =   self.T.pd.read_sql('select * from shares',self.T.eng)
-        s                                   =   self.T.pd.read_sql('select * from servers where production_usage is not null',self.T.eng)
+        s                                   =   self.T.pd.read_sql('select * from servers where s_idx is not null',self.T.eng)
         self.sh         =   self.shares     =   shares
         self.s          =   self.servers    =   s
-        server_dir_dict                     =   dict(zip(s.tag.tolist(),s.home_dir.tolist()))
+        server_dir_dict                     =   dict(zip(s.tag.tolist(),s.home_env.tolist()))
         mac                                 =   [int(str(get_mac()))]
-        worker                              =   s[ s.mac.isin(mac) & s.home_dir.isin([os_environ['HOME']]) ].iloc[0].to_dict()
+        worker                              =   s[ s.mac.isin(mac) & s.home_env.isin([os_environ['HOME']]) ].iloc[0].to_dict()
         self.worker                         =   worker['s_user']
         self.worker_host                    =   worker['s_host']
         global THIS_SERVER
         THIS_SERVER                         =   self.worker
-        self.base_dir                       =   worker['home_dir']
+        self.base_dir                       =   worker['home_env']
         self.server_idx                     =   worker['s_idx']
-        rank                                =   {'high':3,'medium':2,'low':1,'none':0}
-        s['ranking']                        =   s.production_usage.map(rank)
-        self.priority                       =   dict(zip(s.tag.tolist(),s.ranking.tolist()))
+        # rank                                =   {'high':3,'medium':2,'low':1,'none':0}
+        # s['ranking']                        =   s.production_usage.map(rank)
+        # self.priority                       =   dict(zip(s.tag.tolist(),s.ranking.tolist()))
         self.mgr                            =   self
         all_imports                         =   locals().keys()
         
@@ -61,11 +61,11 @@ class sys_servers:
 
         if err:
             t                       =   mnt_as_vol.split('/')[-1]
-            serv_is_low_prod_use    =   len(self.s[ (self.s.tag==t) &
-                                                    (self.s.production_usage=='low') ] )
-            if not serv_is_low_prod_use:
-                i_trace()
-                print                   mnt_src,'mount failed'
+            # serv_is_low_prod_use    =   len(self.s[ (self.s.tag==t) &
+            #                                         (self.s.production_usage=='low') ] )
+            # if not serv_is_low_prod_use:
+            #     i_trace()
+            #     print                   mnt_src,'mount failed'
             (_out,_err)             =   self.T.exec_cmds({'cmds':['rm -fR %s ; ' % mnt_as_vol]})
             assert _err            is   None
 

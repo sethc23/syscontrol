@@ -1,10 +1,15 @@
 
-class System_Reporter:
+class sys_reporter:
     """Functions for uniformly managing output and error communications"""
 
     def __init__(self,_parent=None):
-        self.T                              =   System_Lib().T if (not hasattr(self,'T') and not _parent) \
-                                                else _parent.T if not hasattr(self,'T') else self.T
+
+        if (not hasattr(self,'T') and not _parent):
+            from syscontrol.sys_lib import sys_lib
+            self.T                          =   sys_lib().T
+        else:
+            self.T = _parent.T if not hasattr(self,'T') else self.T
+
         locals().update(                        self.T.__dict__)
 
         from google_tools.google_main                   import Google
