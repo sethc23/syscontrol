@@ -1,7 +1,7 @@
 
 class sys_lib:
 
-    def __init__(self,args,**kwargs):
+    def __init__(self,*args,**kwargs):
         """
         args:
             encoding
@@ -9,6 +9,23 @@ class sys_lib:
             reporter
             exec_cmd
         """
+
+        def run_cmd(cmd,background=False):
+            p = sub_popen(cmd,stdout=sub_PIPE,shell=True,executable='/bin/zsh')
+            if not background:
+                (_out,_err) = p.communicate()
+                assert _err is None
+                return _out.rstrip('\n')
+            else:
+                return
+
+        def growl(msg):
+            growl = ' '.join(['timeout --kill-after=5 4s',
+                            'ssh mbp2 -F /home/ub2/.ssh/config',
+                            '"/usr/local/bin/growlnotify --sticky --message \'%s\'"'])
+            run_cmd(growl % msg)
+            raise SystemExit
+
 
         def _load_connectors():
             eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
@@ -58,7 +75,6 @@ class sys_lib:
         pd.set_option(                          'display.width',180)
         np                                  =   pd.np
         np.set_printoptions(                    linewidth=200,threshold=np.nan)
-
         sys.path.append(                        os.environ['BD'] + '/py_classes')  
         from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
         T                                   =   To_Class()
