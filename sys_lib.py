@@ -33,7 +33,7 @@ class sys_lib:
         from os                             import access                   as os_access
         from os                             import X_OK                     as os_X_OK
         from os                             import mkdir                    as os_mkdir
-        import                                  os
+        import                                  os,sys
         import                                  inspect                     as I
         from traceback                      import format_exc               as tb_format_exc
         from types                          import NoneType
@@ -59,6 +59,7 @@ class sys_lib:
         np                                  =   pd.np
         np.set_printoptions(                    linewidth=200,threshold=np.nan)
 
+        sys.path.append(                        os.environ['BD'] + '/py_classes')  
         from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
         T                                   =   To_Class()
         T.config                            =   To_Class(kwargs,recursive=True)
@@ -66,7 +67,7 @@ class sys_lib:
             T.update(                           T.config.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
-        db_vars = [it for it in db_vars if not T._has_key(it)]
+        db_vars = [it for it in db_vars if not T.config._has_key(it)]
 
         if not db_vars:
             pass
