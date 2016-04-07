@@ -10,14 +10,32 @@ class sys_lib:
             exec_cmd
         """
 
-        def run_cmd(cmd,background=False):
-            p = sub_popen(cmd,stdout=sub_PIPE,shell=True,executable='/bin/zsh')
-            if not background:
+        def run_cmd(cmd,**kwargs):
+
+            defaults = {'res'               :   None,
+                        'return_err'        :   False}
+
+            for name, value in defaults.iteritems():
+                exec "%s = %s" % (name, value) in globals(),locals()
+
+            print kwargs
+            for name, value in kwargs.iteritems():
+                print value
+                exec "%s = %s" % (name, value) in globals(),locals()
+
+            p = sub_popen(cmd,stdout=sub_PIPE,
+                          shell=True,
+                          executable='/bin/zsh')
+
+            if not locals().has_key('background'):
                 (_out,_err) = p.communicate()
                 assert _err is None
-                return _out.rstrip('\n')
-            else:
-                return
+                res = _out.rstrip('\n')
+
+            res = (res,_err) if return_err else res
+            return res
+
+
 
         def growl(msg):
             growl = ' '.join(['timeout --kill-after=5 4s',
@@ -38,6 +56,13 @@ class sys_lib:
             cur                             =   conn.cursor()
             return eng,conn,cur
 
+        # ------------------------------------------------------------------
+        # 
+        # 
+        # ------------------------------------------------------------------
+
+        for name, value in kwargs.iteritems():
+            exec "%s = %s" % (name, value) in globals(),locals()
         import                                  sys
         import                                  codecs
         if args.count('encoding'):
