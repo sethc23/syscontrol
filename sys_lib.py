@@ -12,21 +12,25 @@ class sys_lib:
 
         def run_cmd(cmd,**kwargs):
 
-            defaults = {'res'               :   None,
-                        'return_err'        :   False}
+            defaults = {'return_err'        :   False,
+                        'source_env'        :   False}
 
             for name, value in defaults.iteritems():
                 exec "%s = %s" % (name, value) in globals(),locals()
 
-            print kwargs
             for name, value in kwargs.iteritems():
-                print value
                 exec "%s = %s" % (name, value) in globals(),locals()
 
-            p = sub_popen(cmd,stdout=sub_PIPE,
+            if source_env:
+                cmd = '; '.join(['source %s/.scripts/shell_env/_base' % os.environ['HOME'],
+                                cmd.rstrip(';')])
+            
+            p = sub_popen(cmd,
+                          stdout=sub_PIPE,
                           shell=True,
                           executable='/bin/zsh')
-
+            
+            res = None
             if not locals().has_key('background'):
                 (_out,_err) = p.communicate()
                 assert _err is None
@@ -43,8 +47,6 @@ class sys_lib:
                             '"/usr/local/bin/growlnotify --sticky --message \'%s\'"'])
             run_cmd(growl % msg)
             raise SystemExit
-
-
         def _load_connectors():
             eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
                                                               % T,
@@ -56,18 +58,39 @@ class sys_lib:
             cur                             =   conn.cursor()
             return eng,conn,cur
 
+        
         # ------------------------------------------------------------------
-        # 
-        # 
+        #   BASE
+        
+        from types                          import NoneType
+        
         # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        #   DEFAULTS
+        
+        defaults = {    'debug'             :   False,
+                        'encoding'          :   False}
 
+        for name, value in defaults.iteritems():
+            exec "%s = %s" % (name, value) in globals(),locals()
+        
+        # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        #   KWARGS
+        
         for name, value in kwargs.iteritems():
             exec "%s = %s" % (name, value) in globals(),locals()
+        
+        # ------------------------------------------------------------------
+
+        
         import                                  sys
         import                                  codecs
-        if args.count('encoding'):
+        if encoding:
             reload(sys)
             sys.setdefaultencoding('UTF8')
+        if debug:
+            from traceback                  import format_exc               as tb_format_exc
         from uuid                           import getnode                  as get_mac
         from os                             import system                   as os_cmd
         from sys                            import path                     as py_path
@@ -77,8 +100,6 @@ class sys_lib:
         from os                             import mkdir                    as os_mkdir
         import                                  os,sys
         import                                  inspect                     as I
-        from traceback                      import format_exc               as tb_format_exc
-        from types                          import NoneType
         from subprocess                     import Popen                    as sub_popen
         from subprocess                     import check_output             as sub_check_output
         from subprocess                     import PIPE                     as sub_PIPE
