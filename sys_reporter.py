@@ -1,26 +1,33 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+# NOTE: cannot use arg decorators here without creating infinite importing loop
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+
 
 class sys_reporter:
     """Functions for uniformly managing output and error communications"""
 
     def __init__(self,_parent=None):
-
-        if (not hasattr(self,'T') and not _parent):
-            from syscontrol.sys_lib import sys_lib
-            self.T                          =   sys_lib().T
-        else:
-            self.T = _parent.T if not hasattr(self,'T') else self.T
-
-        locals().update(                        self.T.__dict__)
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
 
         from google_tools.google_main                   import Google
         from pb_tools.pb_tools                          import pb_tools as PB
         # # DISABLED UPON LOADING REPORTER IN GOOGLE
-        # s                                 =   System_Servers(self)
+        # s                                 =   sys_servers(self)
         # self.servers                      =   s.servers
         # self.worker                       =   s.worker
         # self.pb                             =   PB().pb
         # self.google                       =   Google()
         # self.GV                           =   self.google.Voice
+        locals().update(                        self.T.__dict__)
 
     def __get_params(self):
         return                              [name for name,fx in inspect.getmembers(self,inspect.ismethod)
@@ -37,7 +44,7 @@ class sys_reporter:
 
             Assuming this class has already been initiated with:
 
-                self.Reporter               =   System_Reporter(self)
+                self.Reporter               =   sys_reporter(self)
 
 
             Usage [ e.g., at the end of a function ]:
@@ -174,7 +181,7 @@ class sys_reporter:
         return
 
     def _txt(self,log_msg):
-        opt                                 =   'F' if os_environ['USER']=='admin' else 't'
+        opt                                 =   'F' if os.environ['USER']=='admin' else 't'
         cmd                                 =   'echo "%s" | mail -%s 6174295700@vtext.com' % (log_msg,opt)
         proc                                =   self.T.sub_popen(cmd, stdout=self.T.sub_PIPE, shell=True)
         (_out, _err)                        =   proc.communicate()
@@ -183,7 +190,7 @@ class sys_reporter:
         return
 
     def _log(self,log_msg):
-        cmd                                 =   'logger -t "System_Reporter" "%s"' % log_msg
+        cmd                                 =   'logger -t "sys_reporter" "%s"' % log_msg
         proc                                =   self.T.sub_popen(cmd, stdout=self.T.sub_PIPE, shell=True)
         (_out, _err)                        =   proc.communicate()
         assert _out==''

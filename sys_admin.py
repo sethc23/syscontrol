@@ -1,51 +1,57 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    import os,sys
+    sys.path.append(os.environ['HOME_ENV'] + '/.scripts')
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
 
 class sys_admin:
     """Functions for operating administrative features"""
 
-    def __init__(self):
-        # import inspect as I
-        # K = I.stack()
-        
-        # self.T                            =   System_Lib().T
-        # T                                 =   self.T
-        # locals().update(                      T.__dict__)
-        # s                                 =   System_Servers()
-        # self.servers                      =   s.servers
-        # self.worker                       =   s.worker
-        # self.Reporter                     =   System_Reporter(self)
-        # from system_command import exec_cmds
-        # self.exec_cmd_script = exec_cmds
-        pass
-
+    def __init__(self,_parent=None):
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
 
     @arg('cmds',action=Store_List,help="a 'list' of command(s) to execute")
-    @arg('-H','--cmd_host',nargs='?',default=os_environ['USER'],
+    @arg('-H','--cmd_host',nargs='?',default=os.environ['USER'],
          choices=parse_choices_from_pgsql("""
-                                            select distinct server res
-                                            from servers
-                                            where server_idx is not null
-                                            order by server
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
                                           """),
          help="server to execute CMDS")
-    @arg('-W','--cmd_worker',nargs='?',default=os_environ['USER'],
+    @arg('-W','--cmd_worker',nargs='?',default=os.environ['USER'],
          choices=parse_choices_from_pgsql("""
-                                            select distinct server res
-                                            from servers
-                                            where server_idx is not null
-                                            order by server
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
                                           """),
          help="server sending CMDS script to CMD_HOST")
     @arg('-T','--tag',nargs='?',default='exec_cmds',help='label to apply to authorization request for purposes of logging')
     @arg('-R','--results',nargs='*',
          default=['log'],
-         choices                    =   [name.lstrip('_') for name,fx
-                                         in inspect.getmembers(System_Reporter,inspect.ismethod)
-                                         if (name.find('_')==0 and name.find('__')==-1)],
+         choices = result_choices(),
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',
          default=['paste','log','txt'],
          choices                    =   [name.lstrip('_') for name,fx
-                                         in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                         in inspect.getmembers(sys_reporter,inspect.ismethod)
                                          if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def exec_cmds(self,args,**kwargs):
@@ -66,7 +72,7 @@ class sys_admin:
             self.T.update(                      { 'kw_' + k                 :   v})
 
         if ( not hasattr(self.T,'kw_return_output')
-            and not os_environ.has_key('in_args') ):
+            and not os.environ.has_key('in_args') ):
             self.T.update(                      { 'kw_return_output'        :   True})
 
         if [tuple,dict,list].count(type(args)):
@@ -144,4 +150,4 @@ class sys_admin:
                 results_and_errors          =   ['_'.join(['results'] + args.results)]   # default -> ['results_log']
             else:
                 results_and_errors          =   ['_'.join(['errors'] + args.errors)]     # default -> ['errors_paste_log_txt']
-            return System_Reporter().manage(    self,results_and_errors=results_and_errors)
+            return sys_reporter().manage(    self,results_and_errors=results_and_errors)

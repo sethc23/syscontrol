@@ -1,4 +1,22 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    import ipdb as I; I.set_trace()
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+    
 class sys_lib:
 
     def __init__(self,*args,**kwargs):
@@ -32,14 +50,12 @@ class sys_lib:
             
             res = None
             if not locals().has_key('background'):
-                (_out,_err) = p.communicate()
+                (_out,_err)                 =   p.communicate()
                 assert _err is None
-                res = _out.rstrip('\n')
+                res                         =   _out.rstrip('\n')
 
-            res = (res,_err) if return_err else res
+            res                             =   (res,_err) if return_err else res
             return res
-
-
 
         def growl(msg):
             growl = ' '.join(['timeout --kill-after=5 4s',
@@ -47,14 +63,15 @@ class sys_lib:
                             '"/usr/local/bin/growlnotify --sticky --message \'%s\'"'])
             run_cmd(growl % msg)
             raise SystemExit
+
         def _load_connectors():
             eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
-                                                              % T,
+                                                              % self.T,
                                                               encoding='utf-8',
                                                               echo=False)
             conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
                                                            user='%(DB_USER)s' password='%(DB_PW)s' "
-                                                           % T);
+                                                           % self.T);
             cur                             =   conn.cursor()
             return eng,conn,cur
 
@@ -74,6 +91,16 @@ class sys_lib:
         for name, value in defaults.iteritems():
             exec "%s = %s" % (name, value) in globals(),locals()
         
+        # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        #   ARGS
+        
+        if type(args)==tuple:
+            _args                           =   []
+            for it in args: 
+                _args.extend(it)
+            args                            =   _args
+
         # ------------------------------------------------------------------
         # ------------------------------------------------------------------
         #   KWARGS
@@ -121,15 +148,15 @@ class sys_lib:
         pd.set_option(                          'display.width',180)
         np                                  =   pd.np
         np.set_printoptions(                    linewidth=200,threshold=np.nan)
-        sys.path.append(                        os.environ['BD'] + '/py_classes')  
+        sys.path.append(                        os.environ['BD'] + '/py_classes')
         from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
-        T                                   =   To_Class()
-        T.config                            =   To_Class(kwargs,recursive=True)
-        if T.config:
-            T.update(                           T.config.__dict__)
+        self.T                              =   To_Class()
+        self.T.config                       =   To_Class(kwargs,recursive=True)
+        if self.T.config:
+            self.T.update(                           self.T.config.__dict__)
         
-        db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
-        db_vars = [it for it in db_vars if not T.config._has_key(it)]
+        db_vars                             =   ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
+        db_vars                             =   [it for it in db_vars if not self.T.config._has_key(it)]
 
         if not db_vars:
             pass
@@ -137,32 +164,32 @@ class sys_lib:
         elif locals().keys().count('system_settings'):
             from system_settings import DB_NAME,DB_HOST,DB_PORT
             for it in db_vars:
-                eval('T["%s"] = %s' % (it,it))
+                eval('self.T["%s"] = %s' % (it,it))
             
         else:
-            z = eval("__import__('system_settings')")
+            z                               =   eval("__import__('system_settings')")
             for it in db_vars:
-                T[it] = getattr(z,it)
+                self.T[it] = getattr(z,it)
 
 
         if args.count('pgsql'):
             from sqlalchemy                 import create_engine
             import                              logging
             logging.basicConfig()
-            logging.getLogger(                      'sqlalchemy.engine').setLevel(logging.WARNING)
+            logging.getLogger(              'sqlalchemy.engine').setLevel(logging.WARNING)
             from psycopg2                   import connect as pg_connect
             try:
-                eng,conn,cur                    =   _load_connectors()
+                eng,conn,cur                =   _load_connectors()
             except:
                 from getpass import getpass
-                pw = getpass('Root password (to create DB:"%s" via CL): ' % DB_NAME)
+                pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % self.T)
                 p = sub_popen(" ".join(["echo '%s' | sudo -S prompt='' " % pw,
                                         'su postgres -c "psql --cluster 9.4/main -c ',
-                                        "'create database %s;'" % DB_NAME,
+                                        "'create database %(DB_NAME)s;'" % self.T,
                                         '"']),
                               stdout=sub_PIPE,
                               shell=True)
-                (_out, _err) = p.communicate()
+                (_out, _err)                = p.communicate()
                 assert _err is None
                 eng,conn,cur                    =   _load_connectors()
 
@@ -171,19 +198,16 @@ class sys_lib:
             from sys_admin                  import sys_admin
             exec_cmd                        =   sys_admin().exec_cmds
 
-        D                                   =   {'user'                     :   os_environ['USER'],
-                                                 'guid'                     :   str(get_guid().hex)[:7]}
-        D.update(                               {'tmp_tbl'                  :   'tmp_'+D['guid']})
-        self.T                              =   To_Class(D)
+        self.T.update(                          {'user'                     :   os.environ['USER'],
+                                                 'guid'                     :   str(get_guid().hex)[:7]} )
+        self.T.update(                          {'tmp_tbl'                  :   'tmp_' + self.T.guid})
         all_imports                         =   locals().keys()
-        
-        excludes                            =   ['D','self']
+
         for k in all_imports:
-            if not excludes.count(k):
-                self.T.update(                  {k                          :   eval(k) })
-        
+            if not k=='self':
+                self.T.update(                  {k                          :   eval(k) })        
         
         if args.count('reporter'):
-            self.T.Reporter                     =   System_Reporter(self)
+            self.T.Reporter                     =   sys_reporter(self)
 
         globals().update(                       self.T.__dict__)

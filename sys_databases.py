@@ -1,9 +1,28 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
-class System_Databases:
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
 
-    def __init__(self):
-        self.T                      =   System_Lib().T
-        self.databases              =   self.T.pd.read_sql('select * from databases where is_active is True',sys_eng)
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+    
+class sys_databases:
+
+    def __init__(self,_parent=None):
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
+        self.databases                      =   self.T.pd.read_sql('SELECT * FROM databases WHERE is_active IS True',self.T.eng)
 
     class Tables:
 
@@ -86,38 +105,21 @@ class System_Databases:
                 t = """
                     CREATE TABLE servers
                     (
-                        id serial NOT NULL,
                         tag text,
-                        web_service text,
-                        domain text,
-                        local_addr text,
+                        s_user text,
+                        s_host text,
+                        s_path text,
+                        home_env text,
+                        local_ip cidr,
                         local_port integer,
-                        server text,
-                        home_dir text,
-                        subdomain_dest text,
-                        production_usage text,
-                        server_idx integer,
+                        ext_ip cidr,
                         mac bigint,
-                        remote_addr text,
-                        is_active boolean,
-                        subdomain text,
-                        dns_ip text,
-                        socket text,
-                        remote_port integer,
                         model_id text,
                         serial_id text,
-                        last_updated timestamp with time zone,
-                        git_sub_src text,
-                        git_sub_dest text,
-                        git_master_src text,
-                        git_master_dest text,
+                        is_active boolean,
+                        git_sync jsonb,
                         pip_libs json,
-                        pip_last_updated timestamp with time zone,
-                        git_tag text,
-                        host text,
-                        mnt_up text[],
-                        mnt_dev text[],
-                        CONSTRAINT servers_pkey PRIMARY KEY (id)
+                        pip_last_updated timestamp with time zone
                     );
                 """
 

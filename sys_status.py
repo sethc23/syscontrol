@@ -1,43 +1,64 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
-class System_Status:
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+
+
+class sys_status:
     """Functions for checking system statuses"""
 
-    def __init__(self):
-        self.T                      =   System_Lib().T
-        locals().update(                self.T.__dict__)
-        s                           =   System_Servers()
-        self.servers                =   s.servers
-        self.worker                 =   s.worker
-        h                           =   pd.read_sql('select * from system_health',sys_eng)
-        self.Reporter               =   System_Reporter(self)
-        self.processes              =   h[h.type_tag=='process'].copy()
-        self.mounts                 =   h[h.type_tag=='mount'].copy()
-        self.checks                 =   h[h.type_tag=='check'].copy()
-        self.ignore                 =   h[h.type_tag=='ignore'].copy()
+    def __init__(self,_parent=None):
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
+        
+        s                                   =   sys_servers(self)
+        self.servers                        =   s.servers
+        self.worker                         =   s.worker
+        h                                   =   self.T.pd.read_sql('select * from system_health',eng)
+        self.Reporter                       =   self.T.sys_reporter(self)
+        self.processes                      =   h[h.type_tag=='process'].copy()
+        self.mounts                         =   h[h.type_tag=='mount'].copy()
+        self.checks                         =   h[h.type_tag=='check'].copy()
+        self.ignore                         =   h[h.type_tag=='ignore'].copy()
 
-    @arg('target',nargs='?',default=os_environ['USER'],choices=parse_choices_from_pgsql("""
-                                                                select distinct server res
-                                                                from servers
-                                                                where server_idx is not null
-                                                                order by server
-                                                             """),
-        help="server on which to check status")
+    @arg('target',nargs='?',default=os.environ['USER'],
+         choices=parse_choices_from_pgsql("""
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
+                                          """),
+         help="server on which to check status")
     @arg('-R','--results',nargs='*',#action='append',
          default=['log'],
          choices                    =   [name.lstrip('_') for name,fx
-                                         in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                         in inspect.getmembers(sys_reporter,inspect.ismethod)
                                          if (name.find('_')==0 and name.find('__')==-1)] + ['',None],
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',#action='append',
          default=['paste','log','txt'],
          choices                    =   [name.lstrip('_') for name,fx
-                                         in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                         in inspect.getmembers(sys_reporter,inspect.ismethod)
                                          if (name.find('_')==0 and name.find('__')==-1)] + ['',None],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def make_display_check(self,args):
         """ Compares active processes on target server with expected processes from DB and returns pretty results. """
 
-        self.process                        =   'System_Status_Check on %s' % args.target
+        self.process                        =   'sys_status_Check on %s' % args.target
         self.process_start                  =   self.T.dt.now()
         self.process_params                 =   {}
         self.process_stout                  =   []

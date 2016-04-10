@@ -1,32 +1,52 @@
-class System_Config:
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+    
+class sys_config:
     """Functions for getting and setting system configurations"""
 
-    def __init__(self):
+    def __init__(self,_parent=None):
         """
 
             Entry Format: [ {settings directory},{settings file},{cmd to reset program settings} ]
 
         """
-        self.T                      =   System_Lib().T
-        locals().update(                self.T.__dict__)
-        D                           =   {'aprinto'  :   ['%(SERV_HOME)s/aprinto',
-                                                         'aprinto_settings.py'],
-                                         'gitserv'  :   ['%(GIT_SERV_HOME)s/celery/git_serv',
-                                                         'git_serv_settings.py'],
-                                         'nginx'    :   ['%(SERV_HOME)s/nginx/setup/nginx/sites-available',
-                                                         'run_aprinto.conf',
-                                                         ' '.join(['echo "%(PASS)s" | sudo -S -k --prompt=\'\'',
-                                                                   'sh -c "%(SERV_HOME)s/nginx/push_ng_config.bash;',
-                                                                   'nginx -s reload -p %(SERV_HOME)s/run -c',
-                                                                   '/usr/local/openresty/nginx/conf/nginx.conf -g',
-                                                                   '\\"user %(ROOT)s %(ROOT_GRP)s; pid',
-                                                                   '%(SERV_HOME)s/run/pids/sv_nginx.pid; daemon on;\\"";'])
-                                                         ],
-                                         'hosts'    :   ['/etc','hosts']
-                                        }
-        os_environ.update(              {'PASS'     :   PASS})
-        self.auth                   =   'echo "%(PASS)s" | sudo -S -k --prompt=\'\' ' % os_environ + 'sh -c "%(cmd)s";'
-        self.D                      =   D
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
+        
+        self.T.update(                          {'aprinto'  :   ['%(SERV_HOME)s/aprinto',
+                                                                 'aprinto_settings.py'],
+                                                 'gitserv'  :   ['%(GIT_SERV_HOME)s/celery/git_serv',
+                                                                 'git_serv_settings.py'],
+                                                 'nginx'    :   ['%(SERV_HOME)s/nginx/setup/nginx/sites-available',
+                                                                 'run_aprinto.conf',
+                                                                 ' '.join(['echo "%(PASS)s" | sudo -S -k --prompt=\'\'',
+                                                                           'sh -c "%(SERV_HOME)s/nginx/push_ng_config.bash;',
+                                                                           'nginx -s reload -p %(SERV_HOME)s/run -c',
+                                                                           '/usr/local/openresty/nginx/conf/nginx.conf -g',
+                                                                           '\\"user %(ROOT)s %(ROOT_GRP)s; pid',
+                                                                           '%(SERV_HOME)s/run/pids/sv_nginx.pid; daemon on;\\"";'])
+                                                                 ],
+                                                 'hosts'    :   ['/etc','hosts']
+                                                })
+        os.environ.update(                      {'PASS'     :   PASS})
+        self.auth                               =   'echo "%(PASS)s" | sudo -S -k --prompt=\'\' ' % os.environ + 'sh -c "%(cmd)s";'
+        locals().update(                        self.T.__dict__)
 
     def get_cfg(self):
         base                        =   self.base_dir if self.worker=='ub2' else '/Volumes/ub2'+self.base_dir
@@ -40,7 +60,7 @@ class System_Config:
         tbl                         =   'config_rsync'
         conn.set_isolation_level(       0)
         cur.execute(                    'drop table if exists %s'%tbl)
-        cfg.to_sql(                     tbl,sys_eng,index=False)
+        cfg.to_sql(                     tbl,eng,index=False)
         return cfg
 
     def adjust_settings(self,*vars):
@@ -60,9 +80,9 @@ class System_Config:
 
         BINARY USAGE:
 
-            ... System_Control.py settings aprinto behave_txt_false
+            ... sys_control.py settings aprinto behave_txt_false
 
-            ... System_Control.py settings nginx access_log_disable
+            ... sys_control.py settings nginx access_log_disable
 
 
 
@@ -78,8 +98,8 @@ class System_Config:
         binary_toggles              =   [ ['true','false'],
                                           ['enable','disable'] ]
 
-        settings_dir                =   D[ prog ][0] % os_environ
-        settings_file               =   D[ prog ][1] % os_environ
+        settings_dir                =   D[ prog ][0] % os.environ
+        settings_file               =   D[ prog ][1] % os.environ
         t                           =   vars[1]
         toggle                      =   t[t.rfind('_')+1:].lower()
         param                       =   t[:-len(toggle)-1].upper()
@@ -193,7 +213,7 @@ class System_Config:
 
     def update_program_with_settings(self,prog):
         if len(self.D[prog])==3:
-            cmd                     =   self.D[prog][2] % os_environ
+            cmd                     =   self.D[prog][2] % os.environ
             p                       =   sub_popen(cmd,stdout=sub_PIPE,shell=True)
             (_out,_err)             =   p.communicate()
             assert _err==None

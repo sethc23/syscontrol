@@ -1,198 +1,284 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
-class System_Crons:
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+
+class sys_crons:
     """Cron functions to operate"""
 
     def __init__(self,_parent=None):
-        self.T                              =   System_Lib().T if (not hasattr(self,'T') and not _parent) \
-                                                    else _parent.T if not hasattr(self,'T') else self.T
-        locals().update(                        self.T.__dict__)
+
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
+
+        SERVERS                             =   sys_servers(self)
+        S                                   =   SERVERS.servers
+        S                                   =   S[(S.s_idx.isnull()==False)&(S.home_env.isnull()==False)].copy()
+        S['SERV_dir']                       =   S.ix[:,['home_env','s_idx']].apply(lambda s: s[0]+'/SERVER'+str(int(s[1])),axis=1)
+        S['crontab_dir']                    =   S.SERV_dir.map(lambda STR: STR + '/crons')
+
+        self.T.cron_list                    =   self.T.pd.read_sql('SELECT * FROM crons WHERE is_active IS true',self.T.eng)
+        self.T.cron_json                    =   self.T.To_Class()
+        self.T.cron_cnt                     =   len(self.T.cron_list)
+        self.T.mailto                       =   'seth.t.chase@gmail.com'
+        self.T.SCRIPT_RUNNER                =   self.T.os.environ['USER']
+        
+        # self.T.CRON_SCRIPT = '~/cron_script'
+        # self.T.TMP_CRONTAB = '/tmp/crontab'
+
         from crontab                        import CronTab
         from crontab                        import CronItem as type_cron
-        SERVERS                             =   System_Servers(self)
-        S                                   =   SERVERS.servers
-        S                                   =   S[S.server_idx.isnull()==False].copy()
-        S['SERV_dir']                       =   S.ix[:,['home_dir','server_idx']].apply(lambda s: s[0]+'/SERVER'+str(int(s[1])),axis=1)
-        self.servers                        =   S
-        self.worker                         =   SERVERS.worker
-        self.Reporter                       =   System_Reporter(self)
-        self.crons                          =   pd.read_sql('select * from crons',sys_eng)
+
         all_imports                         =   locals().keys()
         for k in all_imports:
-            self.T.update(                          {k              :   eval(k) })
-        T                                   =   self.T
-        locals().update(                        T.__dict__)
-        globals().update(                       T.__dict__)
+            self.T.update(                      {k              :   eval(k) })
+        locals().update(                        self.T.__dict__)
+        globals().update(                       self.T.__dict__)
 
     def osx_env(self):
-        shell                       =   '/bin/bash'
-        path                        =   """
-            /opt/local/bin:/opt/local/sbin:/opt/local/include:/opt/local/lib:
-            /usr/local/bin:/usr/local/sbin:/usr/local/include:/usr/local/lib:
-            /usr/bin:/usr/sbin:
-            /bin                        """.replace('\n','').replace(' ','')
-        mailto                      =   '6174295700@vtext.com'
-        environment_var             =   "SHELL=%s\nPATH=%s\nMAILTO=%s" % (shell,path,mailto)
-        return environment_var
-    def ubuntu_env(self,logname,home_dir):
-        shell                       =   '/bin/bash'
-        path                        =   """
-            /usr/local/bin:/usr/local/sbin:/usr/local/include:/usr/local/lib:
-            /usr/bin:/usr/sbin:
-            /bin                        """.replace('\n','').replace(' ','')
-        mailto                      =   '6174295700@vtext.com'
-        environment_var             =   "SHELL=%s\nPATH=%s\nHOME=%s\nLOGNAME=%s\nMAILTO=%s"%(shell,path,home_dir,logname,mailto)
-        return environment_var
-    def update_cron_json(self,current_server,target_server,cron_info,cron_json):
-        cron_id                     =   str(self.T.get_guid())
-        
-        cron                        =   self.T.CronTab()
-        cron.lines                  =   []
-        if target_server.tag==current_server.tag:
-            crontab_copy            =   'cp -R /tmp/crontab %s/crons/' % target_server.SERV_dir
+        shell           =   '/bin/zsh'
+        return              "SHELL="+shell+"\nPATH=%(s_path)s\nMAILTO=%(mailto)s"
+
+    def ubuntu_env(self):
+        shell           =   '/bin/zsh'
+        return              "SHELL="+shell+"\nPATH=%(s_path)s\nMAILTO=%(mailto)s"
+
+    # OLD
+        # def update_cron_json(self,current_server,target_server,cron_info,cron_json):
+        #     cron_id                     =   str(self.T.get_guid())
+            
+        #     cron                        =   self.T.CronTab()
+        #     cron.lines                  =   []
+        #     if target_server.tag==current_server.tag:
+        #         crontab_copy            =   'cp -R /tmp/crontab %s/crons/' % target_server.SERV_dir
+        #     else:
+        #         crontab_copy            =   "ssh %s 'scp %s:/tmp/crontab $SERV_HOME/crons/'" % (target_server,current_server)
+
+
+        #     # Create Crontab File
+        #     cmd                         =   cron_info.cmd % target_server
+        #     # (move cmd inside bash script)
+        #     cmd                         =   cmd.replace("'","\'")
+        #     cmd                         =   "./cron_script '" + cmd + "'"
+            
+        #     cmt                         =   cron_info.tag
+        #     j                           =   cron.new(command=cmd,comment=cmt)
+
+        #     if type(cron_info.special) ==   self.T.NoneType:
+        #         t                       =   cron_info
+        #         run_time                =   (t.minute,t.hour,t.day_of_month,t.month,t.day_of_week)
+        #         j.setall(                   '%s %s %s %s %s'%run_time)
+        #     else:
+        #         s                       =   cron_info.special
+        #         if   s == '@reboot':        j.every_reboot()
+        #         elif s == '@hourly':        j.every().hours()
+        #         elif s == '@daily':         j.every().dom()
+        #         elif s == '@weekly':        j.setall('0 0 * * 0')
+        #         elif s == '@monthly':       j.every().month()
+        #         elif s == '@yearly':        j.every().year()
+        #         elif s == '@annually':      j.every().year()
+        #         elif s == '@midnight':      j.setall('0 0 * * *')
+            
+        #     # Add Environment Vars
+        #     if target_server.tag.find('ub')==0:  
+        #         e_v                             =   self.ubuntu_env(current_server.tag,
+        #                                                             target_server.home_env)
+        #     else:                   
+        #         e_v                             =   self.osx_env()
+            
+        #     crontab_load                        =   "ssh %s 'crontab %s/crons/crontab'"%(current_server.tag,
+        #                                                                                  target_server.SERV_dir)
+            
+        #     if not cron_json.has_key(target_server.tag):
+        #         cron_json.update({                  target_server.tag           :   {}      })
+                
+        #     cron_json[target_server.tag].update(    {cron_id                    :   {'cron'             :   str(j.cron),
+        #                                                                              'cron_env'         :   e_v,
+        #                                                                              'crontab_copy'     :   crontab_copy,
+        #                                                                              'crontab_load'     :   crontab_load}
+        #                                             })
+            
+        #     return cron_json
+    
+    def update_cron_json(self,cmd_server,target_server,cron_data):
+        d               =   cron_data
+        cron_id         =   str(self.T.get_guid())        
+        cron            =   self.T.CronTab()
+        cron.lines      =   []
+
+        if cmd_server.s_user==target_server.s_user:
+            crontab_copy=   'cp -R /tmp/crontab %(crontab_dir)s/' % target_server
         else:
-            crontab_copy            =   "ssh %s 'scp %s:/tmp/crontab $SERV_HOME/crons/'" % (target_server,current_server)
+            crontab_copy=   ' '.join(['timeout --kill-after=12 10s',
+                                     'gzip -c /tmp/crontab | ssh %(s_user)s "' % target_server,
+                                     # 'source ~/.zshrc; ',
+                                     'cd %(crontab_dir)s; ' % target_server,
+                                     'rm -fr crontab; ',
+                                     ':> crontab; ',
+                                     'gzip -d > crontab; ',
+                                     'crontab crontab; "'])
 
-
-        # Create Crontab File
-        cmd                         =   cron_info.cmd % target_server
+        # Create Crontab File -- SERVER 1
+        cmd             =   d.cmd % target_server
         # (move cmd inside bash script)
-        cmd                         =   cmd.replace("'","\'")
-        cmd                         =   "./cron_script '" + cmd + "'"
+        cmd             =   cmd.replace("'","\'")
+        cmd             =   "~/cron_script '" + cmd + "'"
         
-        cmt                         =   cron_info.tag
-        j                           =   cron.new(command=cmd,comment=cmt)
+        cmt             =   d.tag
+        j               =   cron.new(command=cmd,comment=cmt)
 
-        if type(cron_info.special) ==   self.T.NoneType:
-            t                       =   cron_info
-            run_time                =   (t.minute,t.hour,t.day_of_month,t.month,t.day_of_week)
-            j.setall(                   '%s %s %s %s %s'%run_time)
+        if type(d.special) == self.T.NoneType:
+            run_time    =   (d.minute,d.hour,d.day_of_month,d.month,d.day_of_week)
+            j.setall('%s %s %s %s %s' % run_time)
         else:
-            s                       =   cron_info.special
-            if   s == '@reboot':        j.every_reboot()
-            elif s == '@hourly':        j.every().hours()
-            elif s == '@daily':         j.every().dom()
-            elif s == '@weekly':        j.setall('0 0 * * 0')
-            elif s == '@monthly':       j.every().month()
-            elif s == '@yearly':        j.every().year()
-            elif s == '@annually':      j.every().year()
-            elif s == '@midnight':      j.setall('0 0 * * *')
+            s = d.special
+            if   s == '@reboot':     j.every_reboot()
+            elif s == '@hourly':     j.every().hours()
+            elif s == '@daily':      j.every().dom()
+            elif s == '@weekly':     j.setall('0 0 * * 0')
+            elif s == '@monthly':    j.every().month()
+            elif s == '@yearly':     j.every().year()
+            elif s == '@annually':   j.every().year()
+            elif s == '@midnight':   j.setall('0 0 * * *')
         
         # Add Environment Vars
-        if target_server.tag.find('ub')==0:  
-            e_v                             =   self.ubuntu_env(current_server.tag,
-                                                                target_server.home_dir)
-        else:                   
-            e_v                             =   self.osx_env()
+        e_v             =   self.ubuntu_env() if target_server.s_user.startswith('ub')==0 else self.osx_env()
+        e_v             =   e_v % target_server 
         
-        crontab_load                        =   "ssh %s 'crontab %s/crons/crontab'"%(current_server.tag,
-                                                                                     target_server.SERV_dir)
+         #crontab_load = "ssh %s 'crontab %s/crons/crontab'"%(username,THIS_SERVER.SERV_dir)
         
-        if not cron_json.has_key(target_server.tag):
-            cron_json.update({                  target_server.tag           :   {}      })
+        if not hasattr(self.T.cron_json,target_server.s_user):
+            self.T.cron_json.update({target_server.s_user:{}})
             
-        cron_json[target_server.tag].update(    {cron_id                    :   {'cron'             :   str(j.cron),
-                                                                                 'cron_env'         :   e_v,
-                                                                                 'crontab_copy'     :   crontab_copy,
-                                                                                 'crontab_load'     :   crontab_load}
-                                                })
+        self.T.cron_json[target_server.s_user].update({cron_id:
+                                        {'cron'          : str(j.cron),
+                                         'cron_env'      : e_v,
+                                         'crontab_copy'  : crontab_copy,
+                                        }})
         
-        return cron_json
-    def load_crons_from_json(self,cron_json):
-        for grp_k,grp_v in cron_json.iteritems():
-            cron                            =   CronTab()
-            cron.lines                      =   []
+        return
+
+    def load_crons_from_json(self,serv_cron_json):
+        for grp_k,grp_v in serv_cron_json.iteritems():
+            cron                            =   self.T.CronTab()
+            cron.lines,cmt_dict             =   [],{}
+            max_cmd_len                     =   0
 
             for k,v in grp_v.iteritems():
-                cron.lines.append(              v['cron'].strip('\n'))
+                cronjob                     =   v['cron'].strip('\n')
+                cron_cmt                    =   cronjob[cronjob.rfind('#')+1:]
+                cronjob                     =   cronjob[:len(cronjob) - len(cron_cmt) - 1].strip()
+                max_cmd_len                 =   max_cmd_len if max_cmd_len>len(cronjob) else len(cronjob)
+                if not cron_cmt:
+                    cron_cmt                =   '_' + self.T.get_guid().hex
+                cmt_dict.update(                {cron_cmt.strip():cronjob})
                 cron_env                    =   v['cron_env']
                 crontab_copy                =   v['crontab_copy']
-                crontab_load                =   v['crontab_load']
 
-            # Add Environmental Vars
-            tmp                             =   cron_env.split('\n')
-            tmp.reverse(                        )
-            cron.lines.insert(                  0,'')
-            for it in tmp:
-                cron.lines.insert(              0,it)
-            
-            # Write cron to local tmp file
-            with open('/tmp/crontab','w') as f: f.write('')
-            cron.write(                 '/tmp/crontab')
+            max_cmd_len                     +=  5
+            cron.lines.extend(                  cron_env.split('\n'))
+            cron.lines.append(                  '')
+            for it in sorted(cmt_dict.keys()):
+                _cronjob                    =   cmt_dict[it]
+                _space                      =   ' ' * ( max_cmd_len - len(_cronjob) )
+                cronjob_w_fmt               =   ''.join([_cronjob,_space,'#  ',it])
+                cron.lines.append(              cronjob_w_fmt )
 
-            
-            # Copy & Load Crontab File
-            if grp_k == SERVERS.worker:
-                proc                        =   self.T.sub_check_output(crontab_copy, shell=True)
+            # LOCAL -- Copy & Load Crontab File
+            if grp_k == self.T.SCRIPT_RUNNER:
                 cron.write_to_user()
+
+            # REMOTE -- Create local file, gzip/ssh to target, & load
             else:
-                cmds                        =   ['scp -r %s:/tmp/crontab /tmp/ 2>&1;' % (SERVERS.worker),
-                                                 'crontab /tmp/crontab || exit 1;',
-                                                 'rm -fr /tmp/crontab;']
-                (_out,_err)                 =   self.T.exec_cmds({'cmds':cmds,'cmd_host':grp_k,'cmd_worker':SERVERS.worker})
-                assert          _out       ==   ''
-                assert          _err        is  None
-                cmds                        =   ['rm -fr /tmp/crontab;']
-                (_out,_err)                 =   self.T.exec_cmds({'cmds':cmds})
+
+                with open('/tmp/crontab','w') as f: f.write('')
+                cron.write('/tmp/crontab')
+                
+                p = self.T.sub_popen(crontab_copy,
+                                     stdout=self.T.sub_PIPE,
+                                     shell=True,
+                                     executable='/bin/zsh')
+                (_out,_err) = p.communicate()
+                assert _err is None
+
         return
     
-    @arg('target',nargs='+',default=os_environ['USER'],choices=parse_choices_from_pgsql("""
-                                                                select distinct server res
-                                                                from servers
-                                                                where server_idx is not null
-                                                                order by server
-                                                             """) + ['ALL'],
-        help='target server on which to change cron settings')
+    @arg('target',nargs='*',default=os.environ['USER'],
+         choices=parse_choices_from_pgsql("""
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
+                                         """) + ['ALL'],
+         help='target server on which to change cron settings')
     @arg('-R','--results',nargs='*',
          default=['log'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',
          default=['paste','log','txt'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def load(self,args):
         """Load all crons in target server(s)"""
 
-        cron_list                           =   self.T.pd.read_sql("""  select * from crons
-                                                                        where is_active is true
-                                                                   """, self.T.sys_eng)
+        # cron_list                           =   self.T.pd.read_sql("""  SELECT * FROM crons
+        #                                                                 WHERE is_active IS true
+        #                                                            """, self.T.eng)
         target_servs                        =   args.target if not args.target==['ALL'] else sorted(self.T.S.tag.unique().tolist())
-        current_server                      =   self.T.S[self.T.S.tag==self.T.THIS_PC].iloc[0,:]
+        cmd_server                          =   self.T.S[self.T.S.tag==self.T.SCRIPT_RUNNER].iloc[0,:]
         for _serv in target_servs:
-            serv_cron_list                  =   cron_list[cron_list.server.str.contains(_serv)]
+            serv_cron_list                  =   self.T.cron_list[cron_list.server.str.contains(_serv)]
             if not len(serv_cron_list):
                 pass
             else:
-                target                      =   self.T.S[self.T.S.tag==_serv].iloc[0,:]
-                cron_json                   =   {}
-                for idx,cron in serv_cron_list.iterrows():
-                    cron_json               =   self.update_cron_json(current_server,target,cron,cron_json)
-                self.load_crons_from_json(      {_serv                  :       cron_json[_serv]} )
+                target_server               =   self.T.S[self.T.S.tag==_serv].iloc[0,:]
+                target_server['mailto']     =   self.T.mailto
+                for idx,cron_data in serv_cron_list.iterrows():
+                    self.update_cron_json(cmd_server,target_server,cron_data)
+        
+            self.load_crons_from_json(          { _serv : self.T.cron_json[_serv] } )
         return
 
     
-    @arg('cron',nargs='?',choices=parse_choices_from_pgsql( """
-                                                            select distinct tag res
-                                                            from crons
-                                                            where not is_active is false
-                                                            """),
-        help='cron tag to disable')
+    @arg('cron',nargs='?',
+         choices=parse_choices_from_pgsql(  """
+                                            SELECT DISTINCT tag res
+                                            FROM crons
+                                            WHERE NOT is_active IS false
+                                            """),
+         help='cron tag to disable')
     def disable(self,args):
         """Disable a specific cron on one, several, or all servers (feat. under devel.)"""
         self.T.conn.set_isolation_level( 0)
         self.T.cur.execute(              "update crons set is_active = false where tag = '%s';" % args.cron)    
         self.list(                      args.cron)
 
-    @arg('cron',nargs='?',choices=parse_choices_from_pgsql( """
-                                                            select distinct tag res
-                                                            from crons
-                                                            where is_active is false
-                                                            """),
-        help='cron tag to enable')
+    @arg('cron',nargs='?',
+         choices=parse_choices_from_pgsql(  """
+                                            SELECT DISTINCT tag res
+                                            FROM crons
+                                            WHERE is_active IS false
+                                            """),
+         help='cron tag to enable')
     def enable(self,args):
         """Enable a specific cron on one, several, or all servers (feat. under devel.)"""
         self.T.conn.set_isolation_level( 0)
@@ -201,19 +287,20 @@ class System_Crons:
 
     @arg()
     def list(self,args):
-        print self.T.pd.read_sql("select * from crons order by is_active,tag",self.T.sys_eng)
+        """List all stored crons and details"""
+        print self.T.pd.read_sql("SELECT * FROM crons ORDER BY is_active,tag",self.T.eng)
 
 
     @arg('-R','--results',nargs='*',
          default=['log'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',
          default=['paste','log','txt'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def check_logrotate(self,args):
@@ -224,12 +311,12 @@ class System_Crons:
         self.process_stout                  =   []
         self.process_sterr                  =   None
 
-        (_out,_err)                         =   System_Admin().exec_cmds({'cmds':['cat /etc/logrotate.d/sv_syslog'],'cmd_host':self.worker,'cmd_worker':self.worker})
+        (_out,_err)                         =   sys_admin().exec_cmds({'cmds':['cat /etc/logrotate.d/sv_syslog'],'cmd_host':self.worker,'cmd_worker':self.worker})
         assert _err                        is   None
         rotate_period                       =   7
 
         cmds                                =   ['cat /var/lib/logrotate/status | grep syslogs | grep -v \'tmp_\'']
-        (_out,_err)                         =   System_Admin().exec_cmds({'cmds':cmds,'cmd_host':self.worker,'cmd_worker':self.worker})
+        (_out,_err)                         =   sys_admin().exec_cmds({'cmds':cmds,'cmd_host':self.worker,'cmd_worker':self.worker})
         assert _err                        is   None
         today                               =   dt.now()
         report_failure                      =   False
@@ -257,13 +344,13 @@ class System_Crons:
     @arg('-R','--results',nargs='*',
          default=['log'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',
          default=['paste','log','txt'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def find_new_pip_libs(self,args):
@@ -293,7 +380,7 @@ class System_Crons:
                 known_lib_locs              =   [ saved_libs[it]['location'] for it in saved_libs.keys() ]
                 new_lib_locs                =   [ it for it in found_lib_locs if known_lib_locs.count(it)==0 ]
                 if not hasattr(self,'ignore_lib_D'):
-                    self.health             =   System_Status()
+                    self.health             =   sys_status()
                     self.ignore_lib_D       =   dict(zip(self.health.ignore.param2.tolist(),
                                                     self.health.ignore.server_tag.tolist()))
                 to_save_locs                =   [ it for it in new_lib_locs if (self.ignore_lib_D.has_key(it)==False and it!='') ]
@@ -323,7 +410,7 @@ class System_Crons:
 
                 # Run backup_pip to save lib reqs to paste
                 if not hasattr(self,'SYS'):
-                    self.Backup             =   System_Backup(self)
+                    self.Backup             =   sys_backup(self)
                 vars                        =   [serv] + lib_names
                 self.Backup.pip(                *vars )
 
@@ -338,13 +425,13 @@ class System_Crons:
     @arg('-R','--results',nargs='*',
          default=['log'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling RESULTS')
     @arg('-E','--errors',nargs='*',
          default=['paste','log','txt'],
          choices                            =   [name.lstrip('_') for name,fx
-                                                in inspect.getmembers(System_Reporter,inspect.ismethod)
+                                                in inspect.getmembers(sys_reporter,inspect.ismethod)
                                                 if (name.find('_')==0 and name.find('__')==-1)],
          help='options for handling ERRORS (Note: No reporting if only ERRORS are defined and no error output)')
     def run_git_fsck(self,args):
@@ -354,7 +441,7 @@ class System_Crons:
         self.process_params                 =   {}
         self.process_stout                  =   []
         self.process_sterr                  =   []
-        g                                   =   self.T.pd.read_sql('select * from servers where git_tag is not null',sys_eng)
+        g                                   =   self.T.pd.read_sql('select * from servers where git_tag is not null',eng)
         sub_srcs,sub_dest                   =   g.git_sub_src.tolist(),g.git_sub_dest.tolist()
         master_src                          =   g.git_master_src.tolist()
         all_repos                           =   sub_srcs + sub_dest + master_src
@@ -366,7 +453,7 @@ class System_Crons:
             s_path                          =   it[it.rfind(':')+1:]
             cmds                            =   ['cd %s;' % s_path,
                                                  'git fsck 2>&1;']
-            (_out,_err)                     =   System_Admin().exec_cmds({'cmds':cmds,'cmd_host':serv,'cmd_worker':self.worker})
+            (_out,_err)                     =   sys_admin().exec_cmds({'cmds':cmds,'cmd_host':serv,'cmd_worker':self.worker})
             assert _err==None
             if _out!='':
                 T                           =   { 'msg'                 :   'Repo needs work >>%s<<' % it,
@@ -382,3 +469,5 @@ class System_Crons:
 
         return self.Reporter.manage(            self,results_and_errors=results_and_errors)
 
+if __name__ == '__main__':
+    run_custom_argparse()

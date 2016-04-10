@@ -1,19 +1,37 @@
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
 
-class System_Networking:
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+
+
+class sys_networking:
     """Functions for managing System network"""
 
     def __init__(self,_parent=None):
-        if not _parent:
-            _parent                         =   System_Lib()
-        self.T                              =   _parent.T
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
 
     @arg('-H','--host',action='append',
-         choices                            =   parse_choices_from_pgsql("""
-                                                    select distinct server res
-                                                    from servers
-                                                    where server_idx is not null
-                                                    order by server
-                                                 """) + ['all','ALL'],
+         choices=parse_choices_from_pgsql("""
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
+                                         """) + ['all','ALL'],
          help='server host name')
     @arg('-p','--port',action='append',help='port(s) or port range(s)')
     @arg('-t','--tag',action='append',help='name/regex of service')
@@ -37,7 +55,7 @@ class System_Networking:
         qry_params                      =   []
         df                                  =   self.T.pd.read_sql("select * from services %s" %
                                                                         ' '.join(qry_params),
-                                                                   self.T.sys_eng)
+                                                                   self.T.eng)
 
         sort_params                         =   ['col','direction']
         return df
@@ -45,12 +63,12 @@ class System_Networking:
     @arg('port',help='port to map')
     @arg('tag',help='descriptive tag for labeling service using port')
     @arg('-H','--host',default='ALL',nargs='+',
-         choices                            =   parse_choices_from_pgsql("""
-                                                    select distinct server res
-                                                    from servers
-                                                    where server_idx is not null
-                                                    order by server
-                                                 """) + ['ALL'],
+         choices=parse_choices_from_pgsql("""
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
+                                         """) + ['ALL'],
          help='server host name(s) for port endpoint(s)')
     def set(self,args):
         """Sets any values [Device,Host,Service,Domain] to System pgsql and updates iptables"""

@@ -1,11 +1,30 @@
-class System_Backup:
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+
+
+class sys_backup:
     """Perform backup operations to select systems"""
 
     def __init__(self,_parent=None):
-        self.T                              =   System_Lib().T if (not hasattr(self,'T') and not _parent) \
-                                                    else _parent.T if not hasattr(self,'T') else self.T
-        locals().update(                        self.T.__dict__)
-        s                                   =   System_Servers()
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
+        s                                   =   sys_servers(self)
         self.servers                        =   s.servers
         self.worker                         =   s.worker
         self.base_dir                       =   s.base_dir
@@ -15,7 +34,7 @@ class System_Backup:
         self.params                         =   {}
         # self.dry_run                        =   True
         self.dry_run                        =   False
-        self.Reporter                       =   System_Reporter(self)
+        self.Reporter                       =   sys_reporter(self)
         #   REPORTER HAS PB
         # from pb_tools.pb_tools                          import pb_tools as PB
         self.pb                             =   PB().pb
@@ -66,7 +85,7 @@ class System_Backup:
         self.process_start                  =   self.T.dt.now()
         self.process_params                 =   {}
         self.process_stout                  =   []
-        d                                   =   System_Databases()
+        d                                   =   sys_databases()
         self.databases                      =   d.databases
         self.database_names                 =   self.databases.db_name.tolist()
         for i in range(len(self.databases)):
@@ -130,7 +149,7 @@ class System_Backup:
             incl                        =   sync_items.map(lambda s: ' --include='+s).tolist()
             a,b                         =   pair.split('-')
             a_serv,b_serv               =   map(lambda s: str(self.servers[self.servers.tag==s].server.iloc[0]),pair.split('-'))
-            a_dir,b_dir                 =   map(lambda s: str(self.servers[self.servers.tag==s].home_dir.iloc[0]),pair.split('-'))
+            a_dir,b_dir                 =   map(lambda s: str(self.servers[self.servers.tag==s].home_env.iloc[0]),pair.split('-'))
             # _host                     =    b if priority[a]>priority[b] else a
             src                         =   a_dir if a_serv==self.worker else '/Volumes/'+a_serv+a_dir
             dest                        =   b_dir if b_serv==self.worker else '/Volumes/'+b_serv+b_dir
@@ -143,19 +162,21 @@ class System_Backup:
         return self.to_pastebin(            )
 
 
-    @arg('lib',nargs='+',default='ALL',choices=parse_choices_from_pgsql("""
-                                                                select json_object_keys(pip_libs::json) res
-                                                                from servers
-                                                                where pip_libs is not null
-                                                                and server ilike '%s'
-                                                             """,['--target']) + ['ALL'],
+    @arg('lib',nargs='+',default='ALL',
+         choices=parse_choices_from_pgsql("""
+                                            select json_object_keys(pip_libs::json) res
+                                            from servers
+                                            where pip_libs is not null
+                                            and server ilike '%s'
+                                         """,['--target']) + ['ALL'],
         help='known pip libs to backup\n(list avail. when target included)')
-    @arg('target',nargs='?',default=os_environ['USER'],choices=parse_choices_from_pgsql("""
-                                                                select distinct server res
-                                                                from servers
-                                                                where server_idx is not null
-                                                                order by server
-                                                             """),
+    @arg('target',nargs='?',default=os.environ['USER'],
+         choices=parse_choices_from_pgsql("""
+                                            SELECT DISTINCT tag res 
+                                            FROM servers 
+                                            WHERE s_idx IS NOT NULL 
+                                            ORDER BY tag
+                                          """),
         help='target server on which to backup pip')
     def pip(self,args):
         """Backup specific pip library requirements from a specified server to pgSQL"""
@@ -247,7 +268,7 @@ class System_Backup:
                                             """ % (self.worker,self.process,'%%',
                                                self.process_start,self.process_end)
 
-            df                          =   pd.read_sql("select * from system_log where %s" % condition,sys_eng)
+            df                          =   pd.read_sql("select * from system_log where %s" % condition,eng)
 
             T                           =   df.iloc[0].to_dict()
             T['operation']              =   '%s: %s' % (self.worker,self.process)

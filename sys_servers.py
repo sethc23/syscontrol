@@ -1,24 +1,37 @@
-from syscontrol import *
+#!/home/ub2/.virtualenvs/devenv/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+import inspect
+x = BASE_FILE_PATH      =   inspect.stack()[-1][1]
+BASE_FILE               =   x[x.rfind('/')+1:]
+THIS_FILE               =   __file__[__file__.rfind('/')+1:].rstrip('c')
+
+if BASE_FILE==THIS_FILE:
+    from __init__ import *
+else:
+    from sysparse import basic_components
+    _components = basic_components()
+    for name,arg in _components:
+        exec '%s = arg' % name
+    from argh.decorators import *
+    import os
+
 
 class sys_servers:
     """Functions for Mounting & Unmounting system drives"""
 
     def __init__(self,_parent=None):
+        if hasattr(_parent,'T'):    self.T  =   _parent.T
+        elif hasattr(self,'T'):                 pass
+        else:                       self.T  =   sys_lib(['pgsql']).T
 
-        if (not hasattr(self,'T') and not _parent):
-            from syscontrol.sys_lib import sys_lib
-            self.T                          =   sys_lib(['pgsql']).T
-        else:
-            self.T = _parent.T if not hasattr(self,'T') else self.T
-
-        locals().update(                        self.T.__dict__)
-        shares                              =   self.T.pd.read_sql('select * from shares',self.T.eng)
-        s                                   =   self.T.pd.read_sql('select * from servers where s_idx is not null',self.T.eng)
+        shares                              =   self.T.pd.read_sql('SELECT * FROM shares',self.T.eng)
+        s                                   =   self.T.pd.read_sql('SELECT DISTINCT on(tag) * FROM servers WHERE s_idx IS NOT NULL',self.T.eng)
         self.sh         =   self.shares     =   shares
         self.s          =   self.servers    =   s
         server_dir_dict                     =   dict(zip(s.tag.tolist(),s.home_env.tolist()))
-        mac                                 =   [int(str(get_mac()))]
-        worker                              =   s[ s.mac.isin(mac) & s.home_env.isin([os_environ['HOME']]) ].iloc[0].to_dict()
+        mac                                 =   [int(str(self.T.get_mac()))]
+        worker                              =   s[ s.mac.isin(mac) & s.home_env.isin([os.environ['HOME']]) ].iloc[0].to_dict()
         self.worker                         =   worker['s_user']
         self.worker_host                    =   worker['s_host']
         global THIS_SERVER
@@ -30,12 +43,11 @@ class sys_servers:
         # self.priority                       =   dict(zip(s.tag.tolist(),s.ranking.tolist()))
         self.mgr                            =   self
         all_imports                         =   locals().keys()
-        
-        excludes                            =   ['D','self']
         for k in all_imports:
-            if not excludes.count(k):
+            if not k=='self':
                 self.T.update(                  {k                          :   eval(k) })
         
+        locals().update(                        self.T.__dict__)
         globals().update(                       self.T.__dict__)
 
     @arg('mnt_src',nargs='?',help="SSH source, e.g., admin@localhost:1234:/home/admin/foo (see 'bind_address' in `man ssh`)")
@@ -43,7 +55,7 @@ class sys_servers:
     def mnt_sshfs(self,mnt_src,mnt_as_vol):
         """mount ssh source to this server in dir '/Volumes'"""
 
-        sshfs                       =   self.T.os_environ['SSHFS']+' '
+        sshfs                       =   self.T.os.environ['SSHFS']+' '
 
         cmds                        =   ['sudo umount -f %s > /dev/null 2>&1;' % mnt_as_vol]
         (_out,_err)                 =   self.T.exec_cmds({'cmds':cmds})
