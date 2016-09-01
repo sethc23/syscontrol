@@ -34,7 +34,7 @@ class sys_reporter:
                                              if name.find('_') and not name.find('__')]
 
     def manage(self,admin,results_and_errors):
-        """Input is taken from                 self.process,
+        """Input is taken from self.process,
                                             .process_start,
                                             .process_params,
                                             .process_stout,
@@ -176,7 +176,7 @@ class sys_reporter:
                                                     api_paste_expire_date='1M')
         return pb_url
 
-    def _g_txt(self,log_msg,phone_num='6174295700'):
+    def _g_txt(self,log_msg,phone_num='6179823305'):
         self.GV._msg(                           phone_num, log_msg)
         return
 
