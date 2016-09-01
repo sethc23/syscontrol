@@ -30,8 +30,8 @@ class sys_lib:
 
         def run_cmd(cmd,**kwargs):
 
-            defaults = {'return_err'        :   False,
-                        'source_env'        :   False}
+            defaults = {'return_err'    :   False,
+                        'source_env'    :   False}
 
             for name, value in defaults.iteritems():
                 exec "%s = %s" % (name, value) in globals(),locals()
@@ -50,11 +50,11 @@ class sys_lib:
             
             res = None
             if not locals().has_key('background'):
-                (_out,_err)                 =   p.communicate()
+                (_out,_err)             =   p.communicate()
                 assert _err is None
-                res                         =   _out.rstrip('\n')
+                res                     =   _out.rstrip('\n')
 
-            res                             =   (res,_err) if return_err else res
+            res                         =   (res,_err) if return_err else res
             return res
 
         def growl(msg):
@@ -65,14 +65,14 @@ class sys_lib:
             raise SystemExit
 
         def _load_connectors():
-            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
-                                                              % self.T,
-                                                              encoding='utf-8',
-                                                              echo=False)
-            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
-                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
-                                                           % self.T);
-            cur                             =   conn.cursor()
+            eng                         =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
+                                                          % self.T,
+                                                          encoding='utf-8',
+                                                          echo=False)
+            conn                        =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
+                                                       user='%(DB_USER)s' password='%(DB_PW)s' "
+                                                       % self.T);
+            cur                         =   conn.cursor()
             return eng,conn,cur
 
         
@@ -85,8 +85,8 @@ class sys_lib:
         # ------------------------------------------------------------------
         #   DEFAULTS
         
-        defaults = {    'debug'             :   False,
-                        'encoding'          :   False}
+        defaults = {    'debug'         :   False,
+                        'encoding'      :   False}
 
         for name, value in defaults.iteritems():
             exec "%s = %s" % (name, value) in globals(),locals()
@@ -96,10 +96,10 @@ class sys_lib:
         #   ARGS
         
         if type(args)==tuple:
-            _args                           =   []
+            _args                       =   []
             for it in args: 
                 _args.extend(it)
-            args                            =   _args
+            args                        =   _args
 
         # ------------------------------------------------------------------
         # ------------------------------------------------------------------
@@ -114,8 +114,8 @@ class sys_lib:
         import                                  sys
         import                                  codecs
         if encoding:
-            reload(sys)
-            sys.setdefaultencoding('UTF8')
+            reload(                             sys)
+            sys.setdefaultencoding(             'UTF8')
         if debug:
             from traceback                  import format_exc               as tb_format_exc
         from uuid                           import getnode                  as get_mac
@@ -132,44 +132,44 @@ class sys_lib:
         from subprocess                     import PIPE                     as sub_PIPE
         from subprocess                     import STDOUT                   as sub_stdout
         import                                  shlex
-        from datetime                       import datetime as dt
-        from dateutil                       import parser as DU
+        from datetime                       import datetime                 as dt
+        from dateutil                       import parser                   as DU
         import                                  time
-        delay                               =   time.sleep
+        delay                           =   time.sleep
         from uuid                           import uuid4                    as get_guid
         from datetime                       import datetime                 as dt
         from dateutil                       import parser                   as DU
         from json                           import dumps                    as j_dump
         from re                             import findall                  as re_findall
         import                                  pandas                      as pd
-        pd.set_option(                          'expand_frame_repr',False)
-        pd.set_option(                          'display.max_columns', None)
-        pd.set_option(                          'display.max_rows', 1000)
-        pd.set_option(                          'display.width',180)
-        np                                  =   pd.np
-        np.set_printoptions(                    linewidth=200,threshold=np.nan)
-        sys.path.append(                        os.environ['BD'] + '/py_classes')
+        pd.set_option(                      'expand_frame_repr',False)
+        pd.set_option(                      'display.max_columns', None)
+        pd.set_option(                      'display.max_rows', 1000)
+        pd.set_option(                      'display.width',180)
+        np                              =   pd.np
+        np.set_printoptions(                linewidth=200,threshold=np.nan)
+        sys.path.append(                    os.environ['BD'] + '/py_classes')
         from py_classes                     import To_Class,To_Class_Dict,To_Sub_Classes
-        self.T                              =   To_Class()
-        self.T.config                       =   To_Class(kwargs,recursive=True)
+        self.T                          =   To_Class()
+        self.T.config                   =   To_Class(kwargs,recursive=True)
         if self.T.config:
-            self.T.update(                           self.T.config.__dict__)
+            self.T.update(                  self.T.config.__dict__)
         
-        db_vars                             =   ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
-        db_vars                             =   [it for it in db_vars if not self.T.config._has_key(it)]
+        db_vars                         =   ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
+        db_vars                         =   [it for it in db_vars if not self.T.config._has_key(it)]
 
         if not db_vars:
             pass
 
         elif locals().keys().count('system_settings'):
-            from system_settings import DB_NAME,DB_HOST,DB_PORT
+            from system_settings            import DB_NAME,DB_HOST,DB_PORT
             for it in db_vars:
-                eval('self.T["%s"] = %s' % (it,it))
+                eval(                           'self.T["%s"] = %s' % (it,it))
             
         else:
-            z                               =   eval("__import__('system_settings')")
+            z                           =   eval("__import__('system_settings')")
             for it in db_vars:
-                self.T[it] = getattr(z,it)
+                self.T[it]              =   getattr(z,it)
 
 
         if args.count('pgsql'):
@@ -177,11 +177,11 @@ class sys_lib:
             import                              logging
             logging.basicConfig()
             logging.getLogger(              'sqlalchemy.engine').setLevel(logging.WARNING)
-            from psycopg2                   import connect as pg_connect
+            from psycopg2                   import connect                  as pg_connect
             try:
-                eng,conn,cur                =   _load_connectors()
+                eng,conn,cur            =   _load_connectors()
             except:
-                from getpass import getpass
+                from getpass                import getpass
                 pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % self.T)
                 p = sub_popen(" ".join(["echo '%s' | sudo -S prompt='' " % pw,
                                         'su postgres -c "psql --cluster 9.4/main -c ',
@@ -189,25 +189,25 @@ class sys_lib:
                                         '"']),
                               stdout=sub_PIPE,
                               shell=True)
-                (_out, _err)                = p.communicate()
+                (_out, _err)            =   p.communicate()
                 assert _err is None
-                eng,conn,cur                    =   _load_connectors()
+                eng,conn,cur            =   _load_connectors()
 
 
         if args.count('exec_cmd'):
             from sys_admin                  import sys_admin
-            exec_cmd                        =   sys_admin().exec_cmds
+            exec_cmd                    =   sys_admin().exec_cmds
 
-        self.T.update(                          {'user'                     :   os.environ['USER'],
-                                                 'guid'                     :   str(get_guid().hex)[:7]} )
-        self.T.update(                          {'tmp_tbl'                  :   'tmp_' + self.T.guid})
-        all_imports                         =   locals().keys()
+        self.T.update(                      {'user'                     :   os.environ['USER'],
+                                             'guid'                     :   str(get_guid().hex)[:7]} )
+        self.T.update(                      {'tmp_tbl'                  :   'tmp_' + self.T.guid})
+        all_imports                     =   locals().keys()
 
         for k in all_imports:
             if not k=='self':
-                self.T.update(                  {k                          :   eval(k) })        
+                self.T.update(              {k                          :   eval(k) })        
         
         if args.count('reporter'):
-            self.T.Reporter                     =   sys_reporter(self)
+            self.T.Reporter             =   sys_reporter(self)
 
-        globals().update(                       self.T.__dict__)
+        globals().update(                   self.T.__dict__)
