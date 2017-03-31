@@ -1,4 +1,4 @@
-#!/home/ub2/.virtualenvs/devenv/bin/python
+#!/home/ub2/.virtualenvs/dev/bin/python
 # PYTHON_ARGCOMPLETE_OK
 # _ARC_DEBUG
 
@@ -34,7 +34,7 @@ class sys_control:
 if __name__ == '__main__':
     run_custom_argparse()
 
-    
+
     # import os
     # f                                       =   __file__
     # THIS_MODULE                             =   os.path.dirname(os.path.abspath(f)) + f[f.rfind('/'):]
