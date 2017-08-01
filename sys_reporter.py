@@ -1,4 +1,4 @@
-#!/home/ub2/.virtualenvs/devenv/bin/python
+#!~/.virtualenvs/devenv/bin/python
 # PYTHON_ARGCOMPLETE_OK
 
 # NOTE: cannot use arg decorators here without creating infinite importing loop

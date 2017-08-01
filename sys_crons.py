@@ -1,4 +1,4 @@
-#!/home/ub2/.virtualenvs/devenv/bin/python
+#!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
 import inspect
